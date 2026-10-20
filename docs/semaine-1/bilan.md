@@ -1,5 +1,8 @@
 # BILAN SEMAINE 1
 
+**Initial credits**
+- Zahra : 0.0/200
+- Jordi : 0.2/200
 
 ## Qu’ai-je appris ? 
 
