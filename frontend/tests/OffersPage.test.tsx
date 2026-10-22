@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import OffersPage from "../src/pages/OffersPage.tsx";
 import { adminUser, contactUser, stubFetch, studentUser } from "./helpers/fetchMock.ts";
@@ -31,7 +31,7 @@ describe("OffersPage", () => {
     expect(await screen.findByText("Refonte du portail client")).toBeInTheDocument();
     expect(screen.getByText("Soumise")).toBeInTheDocument();
     expect(screen.getByText("Attribuée")).toBeInTheDocument();
-    expect(screen.getByText("Autre")).toBeInTheDocument();
+    expect(screen.getAllByText("Autre")).toHaveLength(2);
     expect(screen.getByText("2 offres")).toBeInTheDocument();
     expect(screen.getByText("Les offres que vous avez déposées.")).toBeInTheDocument();
   });
@@ -48,6 +48,22 @@ describe("OffersPage", () => {
 
     render(<OffersPage user={adminUser} token="jeton" onUnauthorized={vi.fn()} />);
     expect(screen.getByText("Toutes les offres, tous statuts confondus.")).toBeInTheDocument();
+  });
+
+  it("transmet la période choisie à l'API", async () => {
+    const fetchMock = stubFetch({ "/api/offers": () => Response.json(offers) });
+
+    render(<OffersPage user={studentUser} token="jeton" onUnauthorized={vi.fn()} />);
+    await screen.findByText("Refonte du portail client");
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Période" }), {
+      target: { value: "P1" },
+    });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/offers?period=P1",
+      expect.objectContaining({ headers: { Authorization: "jeton" } }),
+    ));
   });
 
   it("affiche un refus d'accès renvoyé par le backend", async () => {
