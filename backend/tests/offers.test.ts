@@ -62,6 +62,25 @@ describe("GET /offers : visibilité selon le profil", () => {
     expect(response.body.every((o: { status: string }) => o.status === "PUBLISHED")).toBe(true);
   });
 
+  it("filtre les offres par période sans contourner la visibilité", async () => {
+    const response = await request(app)
+      .get("/offers?period=P1")
+      .set("Authorization", tokenFor("CONTACT", CONTACT.MARC_LEJEUNE));
+
+    expect(response.status).toBe(200);
+    expect(offerIds(response.body)).toEqual([OFFER.PDF_REPORTS]);
+    expect(response.body.every((offer: { period: string }) => offer.period === "P1")).toBe(true);
+  });
+
+  it.each(["INVALID", "P1&period=P2"])("refuse une période invalide ou répétée (%s)", async (query) => {
+    const response = await request(app)
+      .get(`/offers?period=${query}`)
+      .set("Authorization", tokenFor("ADMIN", ADMINISTRATOR.ANNE_LECLERCQ));
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("INVALID_QUERY");
+  });
+
   it("montre à un déposant toutes ses offres, quel que soit leur statut", async () => {
     const response = await listOffersAs("CONTACT", CONTACT.MARC_LEJEUNE);
 
