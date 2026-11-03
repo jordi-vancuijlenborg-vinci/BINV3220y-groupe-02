@@ -200,6 +200,25 @@ retirées.
 ### Réponses
 
 - `200` : tableau de candidatures
+
+```json
+[
+  {
+    "id": 1,
+    "offerId": 1,
+    "offerTitle": "Application React de gestion de flotte",
+    "companyShortName": "Lumen Digital",
+    "message": "Le développement React m'intéresse particulièrement.",
+    "status": "IN_PROGRESS",
+    "appliedAt": "2026-10-02 18:10:00"
+  }
+]
+```
+
+`status` vaut `IN_PROGRESS` (En cours), `SELECTED` (Retenue), `REJECTED`
+(Non retenue) ou `WITHDRAWN` (Retirée). L'historique complet est retourné,
+sans filtre d'année, et reste limité à l'étudiant connecté.
+
 - `401` `UNAUTHENTICATED` : session absente ou invalide
 - `403` `FORBIDDEN` : l'utilisateur connecté n'est pas étudiant
 

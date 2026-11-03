@@ -1,15 +1,23 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
-import { APPLICATION, CONTACT, OFFER, STUDENT } from "../src/db/seed/seedIds.ts";
+import { ADMINISTRATOR, APPLICATION, CONTACT, OFFER, STUDENT } from "../src/db/seed/seedIds.ts";
 import { createTestApp, tokenFor } from "./helpers/testApp.ts";
+import { createTestDatabase } from "./helpers/testDatabase.ts";
 
 let app: ReturnType<typeof createTestApp>;
+let db: ReturnType<typeof createTestDatabase>;
 
 beforeEach(() => {
-  app = createTestApp();
+  db = createTestDatabase();
+  app = createTestApp(db);
 });
 
-const applyAs = (kind: "STUDENT" | "CONTACT", id: number, offerId: number, message?: string) =>
+const applyAs = (
+  kind: "ADMIN" | "STUDENT" | "CONTACT",
+  id: number,
+  offerId: number,
+  message?: string,
+) =>
   request(app)
     .post(`/offers/${offerId}/applications`)
     .set("Authorization", tokenFor(kind, id))
@@ -76,5 +84,73 @@ describe("POST /offers/:offerId/applications", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe("INVALID_BODY");
+  });
+});
+
+describe("GET /applications", () => {
+  it("retourne les candidatures de l'étudiant avec les quatre statuts", async () => {
+    db
+      .prepare(
+        `INSERT INTO applications (offer_id, student_id, message, status, applied_at)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run(OFFER.INTERNAL_CHATBOT, STUDENT.INES_HADDAD, "Retenue", "SELECTED", "2026-09-20 10:00:00");
+    db
+      .prepare(
+        `INSERT INTO applications (offer_id, student_id, message, status, applied_at)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run(OFFER.DATA_QUALITY, STUDENT.INES_HADDAD, "Non retenue", "REJECTED", "2026-09-21 10:00:00");
+
+    const response = await request(app)
+      .get("/applications")
+      .set("Authorization", tokenFor("STUDENT", STUDENT.INES_HADDAD));
+
+    expect(response.status).toBe(200);
+    expect(response.body.map((application: { status: string }) => application.status)).toEqual([
+      "IN_PROGRESS",
+      "WITHDRAWN",
+      "REJECTED",
+      "SELECTED",
+    ]);
+  });
+
+  it("ne retourne pas les candidatures d'un autre étudiant", async () => {
+    const response = await request(app)
+      .get("/applications")
+      .set("Authorization", tokenFor("STUDENT", STUDENT.LUCAS_DUPONT));
+
+    expect(response.status).toBe(200);
+    expect(response.body.every((application: { studentId?: number }) => application.studentId === undefined)).toBe(
+      true,
+    );
+    expect(response.body.map((application: { id: number }) => application.id)).toEqual([
+      APPLICATION.LUCAS_FLEET_APP,
+    ]);
+  });
+
+  it("refuse les administrateurs et les contacts", async () => {
+    const adminResponse = await request(app)
+      .get("/applications")
+      .set("Authorization", tokenFor("ADMIN", ADMINISTRATOR.ANNE_LECLERCQ));
+    const contactResponse = await request(app)
+      .get("/applications")
+      .set("Authorization", tokenFor("CONTACT", CONTACT.MARC_LEJEUNE));
+
+    expect(adminResponse.status).toBe(403);
+    expect(contactResponse.status).toBe(403);
+  });
+
+  it("refuse une requête sans session", async () => {
+    expect((await request(app).get("/applications")).status).toBe(401);
+  });
+});
+
+describe("POST /offers/:offerId/applications : autorisation", () => {
+  it("refuse une candidature d'un administrateur", async () => {
+    const response = await applyAs("ADMIN", ADMINISTRATOR.ANNE_LECLERCQ, OFFER.DATA_QUALITY);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error.code).toBe("FORBIDDEN");
   });
 });
