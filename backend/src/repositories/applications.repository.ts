@@ -16,6 +16,11 @@ interface ApplicationByIdQuery {
   studentId: number;
 }
 
+interface ApplicationIdQuery {
+  id: number;
+  studentId: number;
+}
+
 interface OfferQuery {
   id: number;
 }
@@ -32,6 +37,11 @@ export type CreateApplicationResult =
   | { kind: "OFFER_NOT_FOUND" }
   | { kind: "APPLICATION_ALREADY_EXISTS" }
   | { kind: "CREATED"; application: ApplicationDbo };
+
+export type WithdrawApplicationResult =
+  | { kind: "NOT_FOUND" }
+  | { kind: "NOT_WITHDRAWABLE" }
+  | { kind: "WITHDRAWN"; application: ApplicationDbo };
 
 const applicationSelect = `
   SELECT a.id, a.offer_id, o.title AS offer_title, c.short_name AS company_short_name,
@@ -72,6 +82,17 @@ export const createApplicationsRepository = (db: Db) => {
     WHERE a.id = @id AND a.student_id = @studentId
   `);
 
+  const findOwnedById = db.prepare<ApplicationIdQuery, ApplicationDbo>(`
+    ${applicationSelect}
+    WHERE a.id = @id AND a.student_id = @studentId
+  `);
+
+  const withdraw = db.prepare<ApplicationIdQuery, { changes: number }>(`
+    UPDATE applications
+    SET status = 'WITHDRAWN'
+    WHERE id = @id AND student_id = @studentId AND status = 'IN_PROGRESS'
+  `);
+
   const createApplication = db.transaction((params: ApplicationParams): CreateApplicationResult => {
     const offer = findOfferStatus.get({ id: params.offerId });
     if (offer === undefined || offer.status !== "PUBLISHED") {
@@ -94,9 +115,27 @@ export const createApplicationsRepository = (db: Db) => {
     return { kind: "CREATED", application };
   });
 
+  const withdrawApplication = db.transaction(
+    ({ id, studentId }: ApplicationIdQuery): WithdrawApplicationResult => {
+      const current = findOwnedById.get({ id, studentId });
+      if (current === undefined) return { kind: "NOT_FOUND" };
+      if (current.status !== "IN_PROGRESS") return { kind: "NOT_WITHDRAWABLE" };
+
+      const result = withdraw.run({ id, studentId });
+      if (result.changes !== 1) return { kind: "NOT_WITHDRAWABLE" };
+
+      const application = findOwnedById.get({ id, studentId });
+      if (application === undefined) {
+        throw new Error("La candidature retirée est introuvable");
+      }
+      return { kind: "WITHDRAWN", application };
+    },
+  );
+
   return {
     findAll: (studentId: number): ApplicationDbo[] => findAll.all({ studentId }),
     createApplication,
+    withdrawApplication,
   };
 };
 

@@ -154,3 +154,71 @@ describe("POST /offers/:offerId/applications : autorisation", () => {
     expect(response.body.error.code).toBe("FORBIDDEN");
   });
 });
+
+describe("POST /applications/:applicationId/withdraw", () => {
+  it("retire une candidature en cours et renvoie le DTO mis à jour", async () => {
+    const response = await request(app)
+      .post(`/applications/${APPLICATION.LUCAS_FLEET_APP}/withdraw`)
+      .set("Authorization", tokenFor("STUDENT", STUDENT.LUCAS_DUPONT));
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      id: APPLICATION.LUCAS_FLEET_APP,
+      status: "WITHDRAWN",
+    });
+    expect(
+      db
+        .prepare("SELECT status FROM applications WHERE id = ?")
+        .get(APPLICATION.LUCAS_FLEET_APP),
+    ).toEqual({ status: "WITHDRAWN" });
+  });
+
+  it.each([
+    ["retenue", APPLICATION.MATEUSZ_CLOUD_MIGRATION],
+    ["non retenue", APPLICATION.LEA_CLOUD_MIGRATION],
+    ["retirée", APPLICATION.INES_BILLING_API],
+  ])("refuse le retrait d'une candidature %s", async (_label, applicationId) => {
+    const student =
+      applicationId === APPLICATION.MATEUSZ_CLOUD_MIGRATION
+        ? STUDENT.MATEUSZ_KOWALSKI
+        : applicationId === APPLICATION.LEA_CLOUD_MIGRATION
+          ? STUDENT.LEA_MERTENS
+          : STUDENT.INES_HADDAD;
+    const response = await request(app)
+      .post(`/applications/${applicationId}/withdraw`)
+      .set("Authorization", tokenFor("STUDENT", student));
+
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe("APPLICATION_NOT_WITHDRAWABLE");
+  });
+
+  it("refuse la candidature d'un autre étudiant", async () => {
+    const response = await request(app)
+      .post(`/applications/${APPLICATION.LUCAS_FLEET_APP}/withdraw`)
+      .set("Authorization", tokenFor("STUDENT", STUDENT.INES_HADDAD));
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("refuse un identifiant inexistant", async () => {
+    const response = await request(app)
+      .post("/applications/999/withdraw")
+      .set("Authorization", tokenFor("STUDENT", STUDENT.LUCAS_DUPONT));
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it.each([
+    ["administrateur", "ADMIN" as const, ADMINISTRATOR.ANNE_LECLERCQ],
+    ["contact", "CONTACT" as const, CONTACT.MARC_LEJEUNE],
+  ])("refuse le retrait par un %s", async (_label, kind, id) => {
+    const response = await request(app)
+      .post(`/applications/${APPLICATION.LUCAS_FLEET_APP}/withdraw`)
+      .set("Authorization", tokenFor(kind, id));
+
+    expect(response.status).toBe(403);
+    expect(response.body.error.code).toBe("FORBIDDEN");
+  });
+});

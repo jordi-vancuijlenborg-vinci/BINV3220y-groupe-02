@@ -13,3 +13,7 @@ Content-Type: application/json
 ### Consulter ses candidatures
 GET {{baseUrl}}/applications
 Authorization: {{token}}
+
+### Retirer une candidature en cours
+POST {{baseUrl}}/applications/1/withdraw
+Authorization: {{token}}

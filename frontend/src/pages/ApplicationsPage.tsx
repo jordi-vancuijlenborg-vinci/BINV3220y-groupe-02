@@ -10,7 +10,10 @@ interface ApplicationsPageProps {
 }
 
 const ApplicationsPage = ({ token, onUnauthorized }: ApplicationsPageProps) => {
-  const { applications, isLoading, error } = useApplications(token, onUnauthorized);
+  const { applications, isLoading, error, withdrawApplication } = useApplications(
+    token,
+    onUnauthorized,
+  );
 
   if (error) return <ErrorState message={error} />;
   if (isLoading) return <LoadingState />;
@@ -26,7 +29,7 @@ const ApplicationsPage = ({ token, onUnauthorized }: ApplicationsPageProps) => {
   return (
     <section>
       <h1>Mes candidatures</h1>
-      <ApplicationTable applications={applications} />
+      <ApplicationTable applications={applications} onWithdraw={withdrawApplication} />
     </section>
   );
 };

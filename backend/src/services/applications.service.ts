@@ -35,6 +35,28 @@ export const createApplicationsService = (repository: ApplicationsRepository) =>
     }
     return repository.findAll(viewer.id).map(toApplication);
   },
+
+  withdrawApplication: (viewer: User, applicationId: number): Application => {
+    if (!isStudent(viewer)) {
+      throw new HttpError(403, "FORBIDDEN", "Vous n'avez pas accès aux candidatures");
+    }
+
+    const result = repository.withdrawApplication({
+      id: applicationId,
+      studentId: viewer.id,
+    });
+    if (result.kind === "NOT_FOUND") {
+      throw new HttpError(404, "NOT_FOUND", "Candidature introuvable");
+    }
+    if (result.kind === "NOT_WITHDRAWABLE") {
+      throw new HttpError(
+        409,
+        "APPLICATION_NOT_WITHDRAWABLE",
+        "Cette candidature ne peut plus être retirée",
+      );
+    }
+    return toApplication(result.application);
+  },
 });
 
 export type ApplicationsService = ReturnType<typeof createApplicationsService>;

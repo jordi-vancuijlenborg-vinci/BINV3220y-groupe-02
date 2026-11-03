@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import ApplicationsPage from "../src/pages/ApplicationsPage.tsx";
 import { stubFetch } from "./helpers/fetchMock.ts";
@@ -81,5 +81,81 @@ describe("ApplicationsPage", () => {
     render(<ApplicationsPage token="jeton" onUnauthorized={onUnauthorized} />);
 
     await waitFor(() => expect(onUnauthorized).toHaveBeenCalled());
+  });
+
+  it("retire une candidature en cours sans recharger la page", async () => {
+    stubFetch({
+      "/api/applications": () => Response.json(applications),
+      "/api/applications/1/withdraw": () =>
+        Response.json({ ...applications[0], status: "WITHDRAWN" }),
+    });
+
+    render(<ApplicationsPage token="jeton" onUnauthorized={vi.fn()} />);
+    await screen.findByText("Application React");
+
+    const row = screen.getByText("Application React").closest("tr");
+    if (row === null) throw new Error("Ligne de candidature introuvable");
+    fireEvent.click(within(row).getByRole("button", { name: "Retirer" }));
+
+    expect(await within(row).findByText("Retirée")).toBeInTheDocument();
+    expect(within(row).queryByRole("button", { name: "Retirer" })).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("button", { name: "Retirer" })).toHaveLength(0);
+  });
+
+  it("n'affiche le bouton que pour les candidatures en cours", async () => {
+    stubFetch({ "/api/applications": () => Response.json(applications) });
+
+    render(<ApplicationsPage token="jeton" onUnauthorized={vi.fn()} />);
+    await screen.findByText("Application React");
+
+    expect(screen.getAllByRole("button", { name: "Retirer" })).toHaveLength(1);
+  });
+
+  it("désactive le bouton pendant le retrait", async () => {
+    let resolveWithdraw!: (response: Response) => void;
+    const pendingWithdraw = new Promise<Response>((resolve) => {
+      resolveWithdraw = resolve;
+    });
+    stubFetch({
+      "/api/applications": () => Response.json(applications),
+      "/api/applications/1/withdraw": () => pendingWithdraw,
+    });
+
+    render(<ApplicationsPage token="jeton" onUnauthorized={vi.fn()} />);
+    await screen.findByText("Application React");
+    const row = screen.getByText("Application React").closest("tr");
+    if (row === null) throw new Error("Ligne de candidature introuvable");
+    fireEvent.click(within(row).getByRole("button", { name: "Retirer" }));
+
+    const button = within(row).getByRole("button", { name: "Retrait…" });
+    expect(button).toBeDisabled();
+    resolveWithdraw(Response.json({ ...applications[0], status: "WITHDRAWN" }));
+    await within(row).findByText("Retirée");
+  });
+
+  it("affiche le message d'erreur du serveur lors d'un retrait refusé", async () => {
+    stubFetch({
+      "/api/applications": () => Response.json(applications),
+      "/api/applications/1/withdraw": () =>
+        Response.json(
+          {
+            error: {
+              code: "APPLICATION_NOT_WITHDRAWABLE",
+              message: "Cette candidature ne peut plus être retirée",
+            },
+          },
+          { status: 409 },
+        ),
+    });
+
+    render(<ApplicationsPage token="jeton" onUnauthorized={vi.fn()} />);
+    await screen.findByText("Application React");
+    const row = screen.getByText("Application React").closest("tr");
+    if (row === null) throw new Error("Ligne de candidature introuvable");
+    fireEvent.click(within(row).getByRole("button", { name: "Retirer" }));
+
+    expect(
+      await within(row).findByText("Cette candidature ne peut plus être retirée (statut 409)"),
+    ).toBeInTheDocument();
   });
 });

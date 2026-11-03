@@ -227,10 +227,15 @@ sans filtre d'année, et reste limité à l'étudiant connecté.
 Retire la candidature de l'étudiant connecté. La ligne est conservée et son statut devient
 `WITHDRAWN`.
 
+### Requête
+
+- Header `Authorization` obligatoire
+- Aucun body
+
 ### Réponses
 
-- `200` : candidature mise à jour
+- `200` : candidature mise à jour, avec le même format que `GET /applications` et le statut `WITHDRAWN`
 - `401` `UNAUTHENTICATED` : session absente ou invalide
 - `403` `FORBIDDEN` : l'utilisateur connecté n'est pas étudiant
 - `404` `NOT_FOUND` : candidature inexistante ou appartenant à un autre étudiant
-- `409` `APPLICATION_NOT_WITHDRAWABLE` : la candidature n'est plus `IN_PROGRESS`
+- `409` `APPLICATION_NOT_WITHDRAWABLE` : la candidature est déjà retenue, non retenue ou retirée

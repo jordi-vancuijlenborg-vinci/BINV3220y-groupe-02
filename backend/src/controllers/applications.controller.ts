@@ -14,6 +14,14 @@ const parseOfferId = (value: string): number => {
   return id;
 };
 
+const parseApplicationId = (value: string): number => {
+  const id = Number(value);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new HttpError(400, "INVALID_BODY", "L'identifiant de la candidature est invalide");
+  }
+  return id;
+};
+
 const parseMessage = (body: unknown): string | null => {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     throw new HttpError(400, "INVALID_BODY", "Le corps doit être un objet JSON");
@@ -41,6 +49,14 @@ export const createApplicationsRouter = (applicationsService: ApplicationsServic
     res.json(
       applicationsService.listApplications(getCurrentUser(req)).map(toApplicationDto),
     );
+  });
+
+  router.post("/:applicationId/withdraw", (req, res) => {
+    const application = applicationsService.withdrawApplication(
+      getCurrentUser(req),
+      parseApplicationId(req.params.applicationId),
+    );
+    res.json(toApplicationDto(application));
   });
 
   return router;
