@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import type { User } from "../../src/models/user.ts";
 
-type Responder = () => Response;
+type Responder = () => Response | Promise<Response>;
 
 /**
  * Remplace fetch par des réponses choisies selon le début de l'URL appelée.
