@@ -31,6 +31,7 @@ Toute erreur a la même forme :
 | 400 | `INVALID_BODY` | Corps de requête invalide |
 | 401 | `UNAUTHENTICATED` | Session absente, expirée ou invalide ; compte non autorisé à se connecter |
 | 403 | `FORBIDDEN` | Utilisateur connecté, mais sans droit sur la ressource |
+| 409 | `APPLICATION_ALREADY_EXISTS` / `APPLICATION_NOT_WITHDRAWABLE` | Conflit avec l'état actuel d'une candidature |
 | 404 | `NOT_FOUND` | Route inconnue |
 | 500 | `INTERNAL_ERROR` | Erreur inattendue du serveur |
 
@@ -171,3 +172,46 @@ récente à la plus ancienne, puis de la plus récente à la plus ancienne.
 - `401` `UNAUTHENTICATED` : session absente ou invalide.
 - `403` `FORBIDDEN` : contact seulement promoteur ou signataire.
 - `400` `INVALID_QUERY` : `period` est invalide ou répété.
+
+## POST /offers/:offerId/applications
+
+Permet à l'étudiant connecté de candidater à une offre publiée.
+
+### Requête
+
+- Header `Authorization` obligatoire
+- Body JSON facultatif : `{ "message": "…" }`
+- `message` est trimé, vide est ignoré, et sa longueur est limitée à 1000 caractères.
+
+### Réponses
+
+- `201` : candidature créée
+- `400` `INVALID_BODY` : identifiant ou message invalide
+- `401` `UNAUTHENTICATED` : session absente ou invalide
+- `403` `FORBIDDEN` : l'utilisateur connecté n'est pas étudiant
+- `404` `NOT_FOUND` : offre inexistante ou non publiée
+- `409` `APPLICATION_ALREADY_EXISTS` : une candidature active ou traitée existe déjà pour cette offre
+
+## GET /applications
+
+Retourne l'historique des candidatures de l'étudiant connecté, y compris les candidatures
+retirées.
+
+### Réponses
+
+- `200` : tableau de candidatures
+- `401` `UNAUTHENTICATED` : session absente ou invalide
+- `403` `FORBIDDEN` : l'utilisateur connecté n'est pas étudiant
+
+## POST /applications/:applicationId/withdraw
+
+Retire la candidature de l'étudiant connecté. La ligne est conservée et son statut devient
+`WITHDRAWN`.
+
+### Réponses
+
+- `200` : candidature mise à jour
+- `401` `UNAUTHENTICATED` : session absente ou invalide
+- `403` `FORBIDDEN` : l'utilisateur connecté n'est pas étudiant
+- `404` `NOT_FOUND` : candidature inexistante ou appartenant à un autre étudiant
+- `409` `APPLICATION_NOT_WITHDRAWABLE` : la candidature n'est plus `IN_PROGRESS`

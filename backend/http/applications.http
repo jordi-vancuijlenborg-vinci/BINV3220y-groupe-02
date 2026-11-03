@@ -1,0 +1,15 @@
+@baseUrl = http://localhost:3000
+@token = replace-with-student-token
+
+### Candidater à une offre publiée
+POST {{baseUrl}}/offers/1/applications
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "message": "Le sujet m'intéresse particulièrement."
+}
+
+### Consulter ses candidatures
+GET {{baseUrl}}/applications
+Authorization: {{token}}
