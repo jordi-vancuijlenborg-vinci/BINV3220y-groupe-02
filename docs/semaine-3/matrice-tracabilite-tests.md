@@ -67,7 +67,7 @@ Fichiers :
 | 29 | Sans session : 401 | B:144 `refuse une requête sans session` | 401 | Couvert | Couvert |
 | 30 | Libellés français des statuts | A:46 `affiche les candidatures, la date française et les statuts traduits` | « En cours », « Retenue », « Non retenue », « Retirée » | Couvert | Couvert |
 | 31 | Liste vide affichée | A:61 `affiche une liste vide` | « Aucune candidature à afficher. » | Couvert | Couvert |
-| 32 | Les candidatures sont toujours là après rechargement de la page | aucun test automatique (le front simule l'API) | | Absent | Absent : vérifié à la main en semaine 7 |
+| 32 | Les candidatures sont toujours là après rechargement de la page | **[ajouté]** `App.test.tsx` : `conserve la session après le rechargement de l'application` | token conservé ; `/auth/me` appelé après chaque remontage ; vue authentifiée affichée | Absent | Couvert |
 
 ## Comportements testés qui ne relèvent pas de EF-32 ou EF-33
 
@@ -82,7 +82,6 @@ Repérés par Copilot et vérifiés par nous :
 ## Manques restants
 
 - **Cas 15 et 16** : pas ajoutés pour garder des demandes ciblées.
-- **Cas 32** : demanderait un test end-to-end, non demandé.
-- **Deux candidatures envoyées en même temps** : non testé. La transaction SQLite a été vue dans le code, pas vérifiée par un test.
+- **Deux candidatures envoyées en même temps** : **[ajouté]** `applications.test.ts` : `refuse une des deux candidatures envoyées simultanément` ; deux POST HTTP via `Promise.all`, un `201`, un `409` et une seule ligne en base.
 - **Le test B:63 garde son nom trompeur** « active ou traitée ». Le cas « traitée » est maintenant couvert par B:228, mais le renommage reste à faire.
 - **Coquille dans le nom du test B:307** : `Lucaslorsqu'Inès`, il manque une espace.

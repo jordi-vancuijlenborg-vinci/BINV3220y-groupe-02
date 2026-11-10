@@ -67,6 +67,25 @@ describe("POST /offers/:offerId/applications", () => {
     expect(response.body.error.code).toBe("APPLICATION_ALREADY_EXISTS");
   });
 
+  it("refuse une des deux candidatures envoyées simultanément", async () => {
+    const responses = await Promise.all([
+      applyAs("STUDENT", STUDENT.LUCAS_DUPONT, OFFER.DATA_QUALITY, "Premier envoi"),
+      applyAs("STUDENT", STUDENT.LUCAS_DUPONT, OFFER.DATA_QUALITY, "Second envoi"),
+    ]);
+
+    expect(responses.map((response) => response.status).sort()).toEqual([201, 409]);
+    expect(responses.find((response) => response.status === 409)?.body.error.code).toBe(
+      "APPLICATION_ALREADY_EXISTS",
+    );
+    expect(
+      db
+        .prepare(
+          "SELECT COUNT(*) AS count FROM applications WHERE student_id = ? AND offer_id = ?",
+        )
+        .get(STUDENT.LUCAS_DUPONT, OFFER.DATA_QUALITY),
+    ).toEqual({ count: 1 });
+  });
+
   it("refuse un contact", async () => {
     const response = await applyAs("CONTACT", CONTACT.MARC_LEJEUNE, OFFER.DATA_QUALITY);
 
