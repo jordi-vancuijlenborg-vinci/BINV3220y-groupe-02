@@ -222,3 +222,51 @@ describe("POST /applications/:applicationId/withdraw", () => {
     expect(response.body.error.code).toBe("FORBIDDEN");
   });
 });
+
+describe("Candidatures : cas complémentaires", () => {
+  // Ce test échouerait si une candidature SELECTED ou REJECTED ne bloquait plus une nouvelle candidature.
+  it.each(["SELECTED", "REJECTED"] as const)(
+    "refuse une nouvelle candidature après une candidature %s et ne crée qu'une seule ligne",
+    async (status) => {
+      db
+        .prepare(
+          `INSERT INTO applications (offer_id, student_id, message, status, applied_at)
+           VALUES (?, ?, ?, ?, ?)`,
+        )
+        .run(OFFER.DATA_QUALITY, STUDENT.LUCAS_DUPONT, "Traitée", status, "2026-10-05 10:00:00");
+
+      const response = await applyAs("STUDENT", STUDENT.LUCAS_DUPONT, OFFER.DATA_QUALITY);
+
+      expect(response.status).toBe(409);
+      expect(response.body.error.code).toBe("APPLICATION_ALREADY_EXISTS");
+      expect(
+        db
+          .prepare("SELECT COUNT(*) AS count FROM applications WHERE offer_id = ? AND student_id = ?")
+          .get(OFFER.DATA_QUALITY, STUDENT.LUCAS_DUPONT),
+      ).toEqual({ count: 1 });
+    },
+  );
+
+  // Ce test échouerait si une offre inexistante était traitée comme une offre publiable.
+  it("refuse l'offre 999", async () => {
+    const response = await applyAs("STUDENT", STUDENT.LUCAS_DUPONT, 999);
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+  });
+
+  // Ce test échouerait si un message composé uniquement d'espaces n'était pas normalisé en null.
+  it("accepte un message composé uniquement d'espaces avec un message null", async () => {
+    const response = await applyAs("STUDENT", STUDENT.LUCAS_DUPONT, OFFER.DATA_QUALITY, "   ");
+
+    expect(response.status).toBe(201);
+    expect(response.body.message).toBeNull();
+  });
+
+  // Ce test échouerait si la limite de longueur autorisait moins de 1000 caractères.
+  it("accepte un message de 1000 caractères exactement", async () => {
+    const response = await applyAs("STUDENT", STUDENT.LUCAS_DUPONT, OFFER.DATA_QUALITY, "x".repeat(1000));
+
+    expect(response.status).toBe(201);
+  });
+});
