@@ -269,4 +269,65 @@ describe("Candidatures : cas complémentaires", () => {
 
     expect(response.status).toBe(201);
   });
+
+  // Ce test échouerait si les offres soumise ou archivée étaient considérées comme disponibles.
+  it.each([OFFER.CLIENT_PORTAL, OFFER.PDF_REPORTS])(
+    "refuse une offre non publiée sans créer de candidature pour Louis (%s)",
+    async (offerId) => {
+      const response = await applyAs("STUDENT", STUDENT.LOUIS_CLAES, offerId);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error.code).toBe("NOT_FOUND");
+      expect(
+        db
+          .prepare("SELECT COUNT(*) AS count FROM applications WHERE offer_id = ? AND student_id = ?")
+          .get(offerId, STUDENT.LOUIS_CLAES),
+      ).toEqual({ count: 0 });
+    },
+  );
+
+  // Ce test échouerait si GET /applications ne retournait pas les candidatures existantes de l'étudiant pour l'offre.
+  it("retourne les statuts IN_PROGRESS et WITHDRAWN pour Inès sur Billing API", async () => {
+    const applicationResponse = await applyAs("STUDENT", STUDENT.INES_HADDAD, OFFER.BILLING_API);
+    expect(applicationResponse.status).toBe(201);
+
+    const response = await request(app)
+      .get("/applications")
+      .set("Authorization", tokenFor("STUDENT", STUDENT.INES_HADDAD));
+
+    expect(response.status).toBe(200);
+    expect(
+      response.body
+        .filter((application: { offerId: number }) => application.offerId === OFFER.BILLING_API)
+        .map((application: { status: string }) => application.status),
+    ).toEqual(["IN_PROGRESS", "WITHDRAWN"]);
+  });
+
+  // Ce test échouerait si un étudiant pouvait retirer la candidature d'un autre étudiant.
+  it("conserve IN_PROGRESS la candidature de Lucas lorsqu'Inès tente de la retirer", async () => {
+    const response = await request(app)
+      .post(`/applications/${APPLICATION.LUCAS_FLEET_APP}/withdraw`)
+      .set("Authorization", tokenFor("STUDENT", STUDENT.INES_HADDAD));
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+    expect(
+      db
+        .prepare("SELECT status FROM applications WHERE id = ?")
+        .get(APPLICATION.LUCAS_FLEET_APP),
+    ).toEqual({ status: "IN_PROGRESS" });
+  });
+
+  // Ce test échouerait si les routes de candidature acceptaient une requête sans authentification.
+  it("refuse sans session la création et le retrait d'une candidature", async () => {
+    const applicationResponse = await request(app).post(
+      `/offers/${OFFER.DATA_QUALITY}/applications`,
+    );
+    const withdrawResponse = await request(app).post(
+      `/applications/${APPLICATION.LUCAS_FLEET_APP}/withdraw`,
+    );
+
+    expect(applicationResponse.status).toBe(401);
+    expect(withdrawResponse.status).toBe(401);
+  });
 });
