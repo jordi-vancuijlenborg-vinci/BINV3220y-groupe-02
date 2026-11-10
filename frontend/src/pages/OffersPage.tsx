@@ -6,6 +6,7 @@ import OfferTable from "../components/OfferTable.tsx";
 import { useOffers } from "../hooks/useOffers.ts";
 import type { PeriodCode } from "../models/offer.ts";
 import type { User } from "../models/user.ts";
+import { applyToOffer } from "../services/applications.service.ts";
 
 interface OffersPageProps {
   user: User;
@@ -21,7 +22,17 @@ const DESCRIPTIONS = {
 
 const OffersPage = ({ user, token, onUnauthorized }: OffersPageProps) => {
   const [period, setPeriod] = useState<PeriodCode | "">("");
+  const [applyingOfferId, setApplyingOfferId] = useState<number | null>(null);
   const { offers, isLoading, error } = useOffers(token, onUnauthorized, period || undefined);
+
+  const handleApply = async (offerId: number, message: string) => {
+    setApplyingOfferId(offerId);
+    try {
+      await applyToOffer(token, offerId, message);
+    } finally {
+      setApplyingOfferId(null);
+    }
+  };
 
   const renderContent = () => {
     if (error) return <ErrorState message={error} />;
@@ -32,7 +43,12 @@ const OffersPage = ({ user, token, onUnauthorized }: OffersPageProps) => {
         <p className="result-count">
           {offers.length} offre{offers.length > 1 ? "s" : ""}
         </p>
-        <OfferTable offers={offers} />
+        <OfferTable
+          offers={offers}
+          canApply={user.kind === "STUDENT"}
+          applyingOfferId={applyingOfferId}
+          onApply={handleApply}
+        />
       </>
     );
   };

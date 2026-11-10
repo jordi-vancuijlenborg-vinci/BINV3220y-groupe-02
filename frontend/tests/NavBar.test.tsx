@@ -30,4 +30,17 @@ describe("NavBar", () => {
     expect(screen.queryByRole("link", { name: "Offres" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Entreprises" })).toBeInTheDocument();
   });
+
+  it("propose ses candidatures uniquement à un étudiant", () => {
+    renderNavBar(studentUser);
+    expect(screen.getByRole("link", { name: "Mes candidatures" })).toHaveAttribute(
+      "href",
+      "/candidatures",
+    );
+  });
+
+  it.each([adminUser, contactUser])("ne propose pas ses candidatures à un autre profil", (user) => {
+    renderNavBar(user);
+    expect(screen.queryByRole("link", { name: "Mes candidatures" })).not.toBeInTheDocument();
+  });
 });
