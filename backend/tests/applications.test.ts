@@ -67,6 +67,25 @@ describe("POST /offers/:offerId/applications", () => {
     expect(response.body.error.code).toBe("APPLICATION_ALREADY_EXISTS");
   });
 
+  it("refuse une des deux candidatures envoyées simultanément", async () => {
+    const responses = await Promise.all([
+      applyAs("STUDENT", STUDENT.LUCAS_DUPONT, OFFER.DATA_QUALITY, "Premier envoi"),
+      applyAs("STUDENT", STUDENT.LUCAS_DUPONT, OFFER.DATA_QUALITY, "Second envoi"),
+    ]);
+
+    expect(responses.map((response) => response.status).sort()).toEqual([201, 409]);
+    expect(responses.find((response) => response.status === 409)?.body.error.code).toBe(
+      "APPLICATION_ALREADY_EXISTS",
+    );
+    expect(
+      db
+        .prepare(
+          "SELECT COUNT(*) AS count FROM applications WHERE student_id = ? AND offer_id = ?",
+        )
+        .get(STUDENT.LUCAS_DUPONT, OFFER.DATA_QUALITY),
+    ).toEqual({ count: 1 });
+  });
+
   it("refuse un contact", async () => {
     const response = await applyAs("CONTACT", CONTACT.MARC_LEJEUNE, OFFER.DATA_QUALITY);
 
@@ -220,5 +239,144 @@ describe("POST /applications/:applicationId/withdraw", () => {
 
     expect(response.status).toBe(403);
     expect(response.body.error.code).toBe("FORBIDDEN");
+  });
+});
+
+describe("Candidatures : cas complémentaires", () => {
+  // Ce test échouerait si une candidature SELECTED ou REJECTED ne bloquait plus une nouvelle candidature.
+  it.each(["SELECTED", "REJECTED"] as const)(
+    "refuse une nouvelle candidature après une candidature %s et ne crée qu'une seule ligne",
+    async (status) => {
+      db
+        .prepare(
+          `INSERT INTO applications (offer_id, student_id, message, status, applied_at)
+           VALUES (?, ?, ?, ?, ?)`,
+        )
+        .run(OFFER.DATA_QUALITY, STUDENT.LUCAS_DUPONT, "Traitée", status, "2026-10-05 10:00:00");
+
+      const response = await applyAs("STUDENT", STUDENT.LUCAS_DUPONT, OFFER.DATA_QUALITY);
+
+      expect(response.status).toBe(409);
+      expect(response.body.error.code).toBe("APPLICATION_ALREADY_EXISTS");
+      expect(
+        db
+          .prepare("SELECT COUNT(*) AS count FROM applications WHERE offer_id = ? AND student_id = ?")
+          .get(OFFER.DATA_QUALITY, STUDENT.LUCAS_DUPONT),
+      ).toEqual({ count: 1 });
+    },
+  );
+
+  // Ce test échouerait si une offre inexistante était traitée comme une offre publiable.
+  it("refuse l'offre 999", async () => {
+    const response = await applyAs("STUDENT", STUDENT.LUCAS_DUPONT, 999);
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("refuse un identifiant d'offre invalide", async () => {
+    const response = await request(app)
+      .post("/offers/abc/applications")
+      .set("Authorization", tokenFor("STUDENT", STUDENT.LUCAS_DUPONT))
+      .send({});
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("INVALID_PARAM");
+    expect(
+      db
+        .prepare("SELECT COUNT(*) AS count FROM applications WHERE student_id = ?")
+        .get(STUDENT.LUCAS_DUPONT),
+    ).toEqual({ count: 1 });
+  });
+
+  it("refuse un message qui n'est pas une chaîne de caractères", async () => {
+    const response = await request(app)
+      .post(`/offers/${OFFER.DATA_QUALITY}/applications`)
+      .set("Authorization", tokenFor("STUDENT", STUDENT.LOUIS_CLAES))
+      .send({ message: 42 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("INVALID_BODY");
+    expect(
+      db
+        .prepare("SELECT COUNT(*) AS count FROM applications WHERE offer_id = ? AND student_id = ?")
+        .get(OFFER.DATA_QUALITY, STUDENT.LOUIS_CLAES),
+    ).toEqual({ count: 0 });
+  });
+
+  // Ce test échouerait si un message composé uniquement d'espaces n'était pas normalisé en null.
+  it("accepte un message composé uniquement d'espaces avec un message null", async () => {
+    const response = await applyAs("STUDENT", STUDENT.LUCAS_DUPONT, OFFER.DATA_QUALITY, "   ");
+
+    expect(response.status).toBe(201);
+    expect(response.body.message).toBeNull();
+  });
+
+  // Ce test échouerait si la limite de longueur autorisait moins de 1000 caractères.
+  it("accepte un message de 1000 caractères exactement", async () => {
+    const response = await applyAs("STUDENT", STUDENT.LUCAS_DUPONT, OFFER.DATA_QUALITY, "x".repeat(1000));
+
+    expect(response.status).toBe(201);
+  });
+
+  // Ce test échouerait si les offres soumise ou archivée étaient considérées comme disponibles.
+  it.each([OFFER.CLIENT_PORTAL, OFFER.PDF_REPORTS])(
+    "refuse une offre non publiée sans créer de candidature pour Louis (%s)",
+    async (offerId) => {
+      const response = await applyAs("STUDENT", STUDENT.LOUIS_CLAES, offerId);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error.code).toBe("NOT_FOUND");
+      expect(
+        db
+          .prepare("SELECT COUNT(*) AS count FROM applications WHERE offer_id = ? AND student_id = ?")
+          .get(offerId, STUDENT.LOUIS_CLAES),
+      ).toEqual({ count: 0 });
+    },
+  );
+
+  // Ce test échouerait si GET /applications ne retournait pas les candidatures existantes de l'étudiant pour l'offre.
+  it("retourne les statuts IN_PROGRESS et WITHDRAWN pour Inès sur Billing API", async () => {
+    const applicationResponse = await applyAs("STUDENT", STUDENT.INES_HADDAD, OFFER.BILLING_API);
+    expect(applicationResponse.status).toBe(201);
+
+    const response = await request(app)
+      .get("/applications")
+      .set("Authorization", tokenFor("STUDENT", STUDENT.INES_HADDAD));
+
+    expect(response.status).toBe(200);
+    expect(
+      response.body
+        .filter((application: { offerId: number }) => application.offerId === OFFER.BILLING_API)
+        .map((application: { status: string }) => application.status),
+    ).toEqual(["IN_PROGRESS", "WITHDRAWN"]);
+  });
+
+  // Ce test échouerait si un étudiant pouvait retirer la candidature d'un autre étudiant.
+  it("conserve IN_PROGRESS la candidature de Lucas lorsqu'Inès tente de la retirer", async () => {
+    const response = await request(app)
+      .post(`/applications/${APPLICATION.LUCAS_FLEET_APP}/withdraw`)
+      .set("Authorization", tokenFor("STUDENT", STUDENT.INES_HADDAD));
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+    expect(
+      db
+        .prepare("SELECT status FROM applications WHERE id = ?")
+        .get(APPLICATION.LUCAS_FLEET_APP),
+    ).toEqual({ status: "IN_PROGRESS" });
+  });
+
+  // Ce test échouerait si les routes de candidature acceptaient une requête sans authentification.
+  it("refuse sans session la création et le retrait d'une candidature", async () => {
+    const applicationResponse = await request(app).post(
+      `/offers/${OFFER.DATA_QUALITY}/applications`,
+    );
+    const withdrawResponse = await request(app).post(
+      `/applications/${APPLICATION.LUCAS_FLEET_APP}/withdraw`,
+    );
+
+    expect(applicationResponse.status).toBe(401);
+    expect(withdrawResponse.status).toBe(401);
   });
 });
