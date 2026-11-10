@@ -28,6 +28,7 @@ Toute erreur a la même forme :
 | Statut | Code | Cas |
 |---|---|---|
 | 400 | `INVALID_QUERY` | Paramètre de requête invalide |
+| 400 | `INVALID_PARAM` | Paramètre de chemin invalide |
 | 400 | `INVALID_BODY` | Corps de requête invalide |
 | 401 | `UNAUTHENTICATED` | Session absente, expirée ou invalide ; compte non autorisé à se connecter |
 | 403 | `FORBIDDEN` | Utilisateur connecté, mais sans droit sur la ressource |
@@ -186,7 +187,8 @@ Permet à l'étudiant connecté de candidater à une offre publiée.
 ### Réponses
 
 - `201` : candidature créée
-- `400` `INVALID_BODY` : identifiant ou message invalide
+- `400` `INVALID_PARAM` : identifiant d'offre invalide
+- `400` `INVALID_BODY` : message invalide
 - `401` `UNAUTHENTICATED` : session absente ou invalide
 - `403` `FORBIDDEN` : l'utilisateur connecté n'est pas étudiant
 - `404` `NOT_FOUND` : offre inexistante ou non publiée

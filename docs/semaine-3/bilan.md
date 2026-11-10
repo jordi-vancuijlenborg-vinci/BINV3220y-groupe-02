@@ -21,19 +21,21 @@ La première matrice de Copilot était à corriger. Il avait classé le modèle 
 
 Le détail est dans `matrice-tracabilite-tests.md` (32 cas). Avant la séance, il y avait :
 
-- **10 cas absents** : message d'espaces, limite de 1000, offre inexistante, candidature après une candidature traitée, ancienne ligne conservée, 401 pour candidater, 401 pour retirer, identifiant d'offre invalide, message qui n'est pas du texte, persistance après rechargement ;
+- **8 cas absents** : persistance après rechargement et deux candidatures envoyées en même temps restent non couverts par les tests automatisés ; les cas `offerId` invalide et message non textuel sont désormais couverts ;
 - **2 cas partiels** : offres non publiées (2 statuts sur 4, sans vérifier la base) et retrait de la candidature d'un autre étudiant (sans vérifier la base).
 
 Copilot a bien trouvé le test au nom trompeur `refuse une candidature active ou traitée`, qui ne teste que « active ». Il avait par contre marqué deux cas « Couvert » alors qu'ils n'étaient que partiels.
 
 ## Modifications et vérification
 
-On a ajouté 10 tests dans `backend/tests/applications.test.ts` (bloc `Candidatures : cas complémentaires`), sans toucher au code de l'application ni aux tests existants.
+On a ajouté 12 tests dans `backend/tests/applications.test.ts` (bloc `Candidatures : cas complémentaires`) et corrigé le code d'erreur du paramètre `offerId`.
 
 | Test ajouté | Défaut qui le ferait échouer |
 |---|---|
 | Candidature après `SELECTED` puis `REJECTED` : 409 (2 tests) | Le contrôle des doublons ne regarde que `IN_PROGRESS` |
 | `refuse l'offre 999` | L'API plante ou crée une candidature sur une offre inconnue |
+| `refuse un identifiant d'offre invalide` | Le paramètre de chemin est classé à tort comme une erreur de corps |
+| `refuse un message qui n'est pas une chaîne de caractères` | La validation du type du message est supprimée ou contournée |
 | Message d'espaces enregistré comme null | Le message vide n'est pas remplacé par `null` |
 | Message de 1000 caractères accepté | Erreur de borne (`>=` au lieu de `>`) |
 | Offres soumise et archivée refusées sans création (2 tests) | Le contrôle du statut oublie certains statuts, ou l'insertion se fait avant le contrôle |
@@ -60,10 +62,9 @@ On a ajouté 10 tests dans `backend/tests/applications.test.ts` (bloc `Candidatu
 **Limites.**
 
 - Cas non couverts :
-  - `offerId` invalide et message qui n'est pas du texte ;
   - persistance après rechargement (pas de test end-to-end, vérifiée à la main en semaine 7) ;
   - deux candidatures envoyées en même temps.
-- Seul le défaut sur les candidatures traitées a été introduit exprès. Pour les autres tests, le défaut est seulement expliqué.
+- Le défaut de code `offerId` classé comme `INVALID_BODY` a été corrigé et verrouillé par un test. Le comportement déjà présent pour un message non textuel est désormais verrouillé par un test.
 - L'ancien test garde son nom trompeur, et un nom de test ajouté par Copilot contient une coquille (`Lucaslorsqu'Inès`).
 
 ## Audit des guides

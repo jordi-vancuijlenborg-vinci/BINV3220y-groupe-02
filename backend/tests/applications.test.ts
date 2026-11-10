@@ -255,6 +255,36 @@ describe("Candidatures : cas complémentaires", () => {
     expect(response.body.error.code).toBe("NOT_FOUND");
   });
 
+  it("refuse un identifiant d'offre invalide", async () => {
+    const response = await request(app)
+      .post("/offers/abc/applications")
+      .set("Authorization", tokenFor("STUDENT", STUDENT.LUCAS_DUPONT))
+      .send({});
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("INVALID_PARAM");
+    expect(
+      db
+        .prepare("SELECT COUNT(*) AS count FROM applications WHERE student_id = ?")
+        .get(STUDENT.LUCAS_DUPONT),
+    ).toEqual({ count: 1 });
+  });
+
+  it("refuse un message qui n'est pas une chaîne de caractères", async () => {
+    const response = await request(app)
+      .post(`/offers/${OFFER.DATA_QUALITY}/applications`)
+      .set("Authorization", tokenFor("STUDENT", STUDENT.LOUIS_CLAES))
+      .send({ message: 42 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("INVALID_BODY");
+    expect(
+      db
+        .prepare("SELECT COUNT(*) AS count FROM applications WHERE offer_id = ? AND student_id = ?")
+        .get(OFFER.DATA_QUALITY, STUDENT.LOUIS_CLAES),
+    ).toEqual({ count: 0 });
+  });
+
   // Ce test échouerait si un message composé uniquement d'espaces n'était pas normalisé en null.
   it("accepte un message composé uniquement d'espaces avec un message null", async () => {
     const response = await applyAs("STUDENT", STUDENT.LUCAS_DUPONT, OFFER.DATA_QUALITY, "   ");

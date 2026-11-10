@@ -40,8 +40,8 @@ Fichiers :
 | 12 | Un contact candidate : 403 | B:70 `refuse un contact` | 403 ; `FORBIDDEN` | Couvert | Couvert |
 | 13 | Un administrateur candidate : 403 | B:150 `refuse une candidature d'un administrateur` | 403 ; `FORBIDDEN` | Couvert | Couvert |
 | 14 | Sans session : 401 | **[ajouté]** B:322 `refuse sans session la création et le retrait d'une candidature` | 401 | Absent | Couvert |
-| 15 | Identifiant d'offre invalide (`abc`) : 400 | aucun | | Absent | Absent |
-| 16 | Message qui n'est pas du texte (`42`) : 400 | aucun | | Absent | Absent |
+| 15 | Identifiant d'offre invalide (`abc`) : 400 `INVALID_PARAM` | **[ajouté]** B:258 `refuse un identifiant d'offre invalide` | 400 ; `INVALID_PARAM` ; aucune ligne créée | Absent | Couvert |
+| 16 | Message qui n'est pas du texte (`42`) : 400 `INVALID_BODY` | **[ajouté]** B:273 `refuse un message qui n'est pas une chaîne de caractères` | 400 ; `INVALID_BODY` ; aucune ligne créée | Absent | Couvert |
 | 17 | Interface : formulaire seulement pour un étudiant | O:69 `affiche le formulaire de candidature uniquement à l'étudiant` ; `n'affiche pas d'action de candidature aux contacts` | boutons « Candidater » présents ou absents | Couvert | Couvert |
 | 18 | Interface : confirmation après succès, erreur du serveur affichée | O:78 `affiche la confirmation et masque le formulaire après une candidature réussie` ; `affiche le message d'erreur renvoyé lors d'une candidature` | « Candidature envoyée » ; `alert` avec le message du 409 | Couvert | Couvert |
 
