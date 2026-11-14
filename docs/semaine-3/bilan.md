@@ -1,5 +1,9 @@
 # Bilan semaine 8 : harnais agentique
 
+**Crédits IA**
+- Zahra : 10/200
+- Jordi : 33.3/200
+
 Fichiers de la séance :
 
 - `matrice-guides-senseurs.md` : inventaire des guides et senseurs, et audit des guides par rapport à Web 2 ;
