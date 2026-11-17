@@ -149,6 +149,8 @@ récente à la plus ancienne, puis de la plus récente à la plus ancienne.
 - Header `Authorization` obligatoire
 - Paramètre facultatif `period` : `P1`, `P2` ou `OTHER` pour limiter les offres à une
   période. Sans ce paramètre, toutes les offres normalement visibles sont retournées.
+- Paramètre facultatif `q` : expression recherchée dans le titre, sans tenir compte de la
+  casse. Les espaces au début et à la fin sont ignorés, et une valeur vide est ignorée.
 
 ### Réponses
 
@@ -172,7 +174,7 @@ récente à la plus ancienne, puis de la plus récente à la plus ancienne.
 
 - `401` `UNAUTHENTICATED` : session absente ou invalide.
 - `403` `FORBIDDEN` : contact seulement promoteur ou signataire.
-- `400` `INVALID_QUERY` : `period` est invalide ou répété.
+- `400` `INVALID_QUERY` : `period` est invalide ou répété, ou `q` est invalide.
 
 ## POST /offers/:offerId/applications
 

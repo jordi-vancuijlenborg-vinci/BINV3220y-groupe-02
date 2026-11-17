@@ -6,9 +6,14 @@ import type { PeriodCode } from "../models/offer.ts";
 export const getOffers = async (
   token: string,
   period?: PeriodCode,
+  title?: string,
   signal?: AbortSignal,
 ): Promise<Offer[]> => {
-  const query = period === undefined ? "" : `?period=${encodeURIComponent(period)}`;
+  const params = new URLSearchParams();
+  const normalizedTitle = title?.trim();
+  if (normalizedTitle) params.set("q", normalizedTitle);
+  if (period !== undefined) params.set("period", period);
+  const query = params.size === 0 ? "" : `?${params.toString()}`;
   const response = await fetch(`${API_URL}/offers${query}`, {
     headers: { Authorization: token },
     signal,
