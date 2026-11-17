@@ -8,7 +8,8 @@ Fichiers de la séance :
 
 - `conversation-1.md` : audit des tests avec le skill `test-gap-audit`, puis test et correction du retrait ;
 - `conversation-2.md` : recherche EF-30 avec le skill `test-driven-development` (deux cycles TDD) ;
-- `conversation-3.md` : essais du hook Tool Guardian.
+- `conversation-3.md` : essais du hook Tool Guardian ;
+- `conversation-4.md` : mise à jour des exemples HTTP (`offers.http`, `applications.http`).
 
 Installés dans `.github/` : les skills `test-gap-audit` et `test-driven-development` (avec la consigne d'arrêt avant l'implémentation et la licence Superpowers), le hook `hooks/tool-guardian.json` et `hooks/guard-tool.cjs`, et la règle TDD ajoutée à `copilot-instructions.md`.
 
