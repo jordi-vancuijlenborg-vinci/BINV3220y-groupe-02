@@ -55,6 +55,28 @@ describe("App : session", () => {
     expect(screen.getByRole("link", { name: "Entreprises" })).toBeInTheDocument();
   });
 
+  it("conserve la session après le rechargement de l'application", async () => {
+    localStorage.setItem(TOKEN_KEY, "jeton-mateusz");
+    const fetchMock = stubFetch({
+      "/api/auth/me": () => Response.json(studentUser),
+      "/api/health": () => Response.json({ status: "ok" }),
+    });
+
+    const firstRender = renderApp();
+    expect(await screen.findByRole("heading", { name: "Bonjour Mateusz" })).toBeInTheDocument();
+    firstRender.unmount();
+
+    renderApp();
+
+    expect(await screen.findByRole("heading", { name: "Bonjour Mateusz" })).toBeInTheDocument();
+    expect(localStorage.getItem(TOKEN_KEY)).toBe("jeton-mateusz");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/auth/me",
+      expect.objectContaining({ headers: { Authorization: "jeton-mateusz" } }),
+    );
+    expect(fetchMock.mock.calls.filter(([input]) => String(input) === "/api/auth/me")).toHaveLength(2);
+  });
+
   it("oublie une session refusée par le backend", async () => {
     localStorage.setItem(TOKEN_KEY, "jeton-expire");
     stubFetch({

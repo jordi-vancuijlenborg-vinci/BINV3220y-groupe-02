@@ -9,7 +9,7 @@ const MAX_MESSAGE_LENGTH = 1000;
 const parseOfferId = (value: string): number => {
   const id = Number(value);
   if (!Number.isInteger(id) || id <= 0) {
-    throw new HttpError(400, "INVALID_BODY", "L'identifiant de l'offre est invalide");
+    throw new HttpError(400, "INVALID_PARAM", "L'identifiant de l'offre est invalide");
   }
   return id;
 };
