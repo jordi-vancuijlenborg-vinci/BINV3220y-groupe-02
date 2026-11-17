@@ -237,6 +237,7 @@ Retire la candidature de l'étudiant connecté. La ligne est conservée et son s
 ### Réponses
 
 - `200` : candidature mise à jour, avec le même format que `GET /applications` et le statut `WITHDRAWN`
+- `400` `INVALID_PARAM` : identifiant de candidature invalide
 - `401` `UNAUTHENTICATED` : session absente ou invalide
 - `403` `FORBIDDEN` : l'utilisateur connecté n'est pas étudiant
 - `404` `NOT_FOUND` : candidature inexistante ou appartenant à un autre étudiant
