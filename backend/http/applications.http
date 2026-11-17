@@ -17,3 +17,7 @@ Authorization: {{token}}
 ### Retirer une candidature en cours
 POST {{baseUrl}}/applications/1/withdraw
 Authorization: {{token}}
+
+### Erreur 400 INVALID_PARAM : retrait avec un identifiant invalide
+POST {{baseUrl}}/applications/abc/withdraw
+Authorization: {{token}}

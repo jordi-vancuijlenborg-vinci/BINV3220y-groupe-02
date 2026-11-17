@@ -102,3 +102,11 @@ Hooks own loading/error state, abort in-flight fetches on cleanup, and call
   contact, while access to company-scoped data must still respect those relationships.
 - Keep environment and generated database files out of version control. Configure
   local values through `backend/.env` based on [backend/.env.example](../backend/.env.example).
+
+## Test-driven development
+
+Pour tout ajout de fonctionnalité ou correction de bug, lis et applique
+`.github/skills/test-driven-development/SKILL.md` avant de modifier le code de
+l’application. Écris et exécute les tests d’abord, présente-les, puis attends leur
+validation explicite avant l’implémentation. Cette règle ne concerne pas les demandes
+d’explication ou de documentation seules.

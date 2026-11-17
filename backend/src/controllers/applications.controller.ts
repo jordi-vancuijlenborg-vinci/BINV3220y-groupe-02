@@ -17,7 +17,7 @@ const parseOfferId = (value: string): number => {
 const parseApplicationId = (value: string): number => {
   const id = Number(value);
   if (!Number.isInteger(id) || id <= 0) {
-    throw new HttpError(400, "INVALID_BODY", "L'identifiant de la candidature est invalide");
+    throw new HttpError(400, "INVALID_PARAM", "L'identifiant de la candidature est invalide");
   }
   return id;
 };

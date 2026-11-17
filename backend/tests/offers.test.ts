@@ -72,6 +72,67 @@ describe("GET /offers : visibilité selon le profil", () => {
     expect(response.body.every((offer: { period: string }) => offer.period === "P1")).toBe(true);
   });
 
+  it("recherche une expression dans le titre sans distinguer la casse ni les espaces extérieurs", async () => {
+    const response = await request(app)
+      .get("/offers?q=%20API%20REST%20")
+      .set("Authorization", tokenFor("ADMIN", ADMINISTRATOR.ANNE_LECLERCQ));
+
+    expect(response.status).toBe(200);
+    expect(offerIds(response.body)).toEqual([OFFER.BILLING_API]);
+  });
+
+  it("ignore une recherche composée uniquement d'espaces", async () => {
+    const withoutSearch = await listOffersAs("ADMIN", ADMINISTRATOR.ANNE_LECLERCQ);
+    const withSpaces = await request(app)
+      .get("/offers?q=%20%20")
+      .set("Authorization", tokenFor("ADMIN", ADMINISTRATOR.ANNE_LECLERCQ));
+
+    expect(withSpaces.status).toBe(200);
+    expect(offerIds(withSpaces.body)).toEqual(offerIds(withoutSearch.body));
+  });
+
+  it.each(["%", "_"])(
+    "traite le caractère spécial %s comme du texte littéral dans la recherche",
+    async (character) => {
+      const response = await request(app)
+        .get(`/offers?q=${encodeURIComponent(character)}`)
+        .set("Authorization", tokenFor("ADMIN", ADMINISTRATOR.ANNE_LECLERCQ));
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([]);
+    },
+  );
+
+  it("combine la recherche par titre avec le filtre de période", async () => {
+    const response = await request(app)
+      .get("/offers?q=application&period=P2")
+      .set("Authorization", tokenFor("ADMIN", ADMINISTRATOR.ANNE_LECLERCQ));
+
+    expect(response.status).toBe(200);
+    expect(offerIds(response.body)).toEqual([OFFER.FLEET_APP, OFFER.CLOUD_MIGRATION]);
+  });
+
+  it("conserve la visibilité publiée pour la recherche d'un étudiant", async () => {
+    const response = await request(app)
+      .get("/offers?q=application")
+      .set("Authorization", tokenFor("STUDENT", STUDENT.LUCAS_DUPONT));
+
+    expect(response.status).toBe(200);
+    expect(offerIds(response.body)).toEqual([OFFER.FLEET_APP]);
+    expect(response.body.every((offer: { status: string }) => offer.status === "PUBLISHED")).toBe(
+      true,
+    );
+  });
+
+  it("retourne une liste vide quand aucun titre ne correspond", async () => {
+    const response = await request(app)
+      .get("/offers?q=introuvable")
+      .set("Authorization", tokenFor("ADMIN", ADMINISTRATOR.ANNE_LECLERCQ));
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([]);
+  });
+
   it.each(["INVALID", "P1&period=P2"])("refuse une période invalide ou répétée (%s)", async (query) => {
     const response = await request(app)
       .get(`/offers?period=${query}`)

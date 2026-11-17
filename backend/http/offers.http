@@ -41,3 +41,27 @@ Authorization: {{depositor.response.body.token}}
 ### Erreur 403 : promotrice et signataire
 GET http://localhost:3000/offers
 Authorization: {{promoter.response.body.token}}
+
+### Offres de l'étudiant en période P2 (4 offres publiées)
+GET http://localhost:3000/offers?period=P2
+Authorization: {{student.response.body.token}}
+
+### Recherche administrateur avec majuscules et espaces (1 offre)
+GET http://localhost:3000/offers?q=%20API%20REST%20
+Authorization: {{admin.response.body.token}}
+
+### Recherche administrateur combinée avec la période P2 (2 offres)
+GET http://localhost:3000/offers?q=application&period=P2
+Authorization: {{admin.response.body.token}}
+
+### Recherche étudiant « application » (1 offre publiée)
+GET http://localhost:3000/offers?q=application
+Authorization: {{student.response.body.token}}
+
+### Recherche administrateur sans résultat (0 offre)
+GET http://localhost:3000/offers?q=introuvable
+Authorization: {{admin.response.body.token}}
+
+### Recherche administrateur du caractère % comme texte (0 offre)
+GET http://localhost:3000/offers?q=%25
+Authorization: {{admin.response.body.token}}

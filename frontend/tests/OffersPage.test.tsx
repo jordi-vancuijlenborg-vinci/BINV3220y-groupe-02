@@ -66,6 +66,41 @@ describe("OffersPage", () => {
     ));
   });
 
+  it("recherche l'expression saisie dans le titre et la combine avec la période", async () => {
+    const fetchMock = stubFetch({
+      "/api/offers": () => Response.json([offers[0]]),
+    });
+
+    render(<OffersPage user={studentUser} token="jeton" onUnauthorized={vi.fn()} />);
+    await screen.findByText("Refonte du portail client");
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Rechercher dans les titres" }), {
+      target: { value: "  portail client  " },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "Période" }), {
+      target: { value: "P2" },
+    });
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenLastCalledWith(
+        "/api/offers?q=portail+client&period=P2",
+        expect.objectContaining({ headers: { Authorization: "jeton" } }),
+      ),
+    );
+  });
+
+  it("affiche un message adapté quand la recherche ne donne aucun résultat", async () => {
+    stubFetch({ "/api/offers": () => Response.json([]) });
+
+    render(<OffersPage user={studentUser} token="jeton" onUnauthorized={vi.fn()} />);
+    const searchField = await screen.findByRole("searchbox", {
+      name: "Rechercher dans les titres",
+    });
+    fireEvent.change(searchField, { target: { value: "introuvable" } });
+
+    expect(await screen.findByText("Aucune offre ne correspond à votre recherche.")).toBeInTheDocument();
+  });
+
   it("affiche le formulaire de candidature uniquement à l'étudiant", async () => {
     stubFetch({ "/api/offers": () => Response.json(offers) });
 

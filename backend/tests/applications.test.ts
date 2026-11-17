@@ -229,6 +229,23 @@ describe("POST /applications/:applicationId/withdraw", () => {
     expect(response.body.error.code).toBe("NOT_FOUND");
   });
 
+  it.each(["abc", "0", "-1", "1.5"])(
+    "refuse un identifiant de retrait invalide (%s)",
+    async (applicationId) => {
+      const response = await request(app)
+        .post(`/applications/${applicationId}/withdraw`)
+        .set("Authorization", tokenFor("STUDENT", STUDENT.LUCAS_DUPONT));
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe("INVALID_PARAM");
+      expect(
+        db
+          .prepare("SELECT status FROM applications WHERE id = ?")
+          .get(APPLICATION.LUCAS_FLEET_APP),
+      ).toEqual({ status: "IN_PROGRESS" });
+    },
+  );
+
   it.each([
     ["administrateur", "ADMIN" as const, ADMINISTRATOR.ANNE_LECLERCQ],
     ["contact", "CONTACT" as const, CONTACT.MARC_LEJEUNE],
