@@ -149,6 +149,8 @@ récente à la plus ancienne, puis de la plus récente à la plus ancienne.
 - Header `Authorization` obligatoire
 - Paramètre facultatif `period` : `P1`, `P2` ou `OTHER` pour limiter les offres à une
   période. Sans ce paramètre, toutes les offres normalement visibles sont retournées.
+- Paramètre facultatif `q` : expression recherchée dans le titre, sans tenir compte de la
+  casse. Les espaces au début et à la fin sont ignorés, et une valeur vide est ignorée.
 
 ### Réponses
 
@@ -172,7 +174,7 @@ récente à la plus ancienne, puis de la plus récente à la plus ancienne.
 
 - `401` `UNAUTHENTICATED` : session absente ou invalide.
 - `403` `FORBIDDEN` : contact seulement promoteur ou signataire.
-- `400` `INVALID_QUERY` : `period` est invalide ou répété.
+- `400` `INVALID_QUERY` : `period` est invalide ou répété, ou `q` est invalide.
 
 ## POST /offers/:offerId/applications
 
@@ -237,6 +239,7 @@ Retire la candidature de l'étudiant connecté. La ligne est conservée et son s
 ### Réponses
 
 - `200` : candidature mise à jour, avec le même format que `GET /applications` et le statut `WITHDRAWN`
+- `400` `INVALID_PARAM` : identifiant de candidature invalide
 - `401` `UNAUTHENTICATED` : session absente ou invalide
 - `403` `FORBIDDEN` : l'utilisateur connecté n'est pas étudiant
 - `404` `NOT_FOUND` : candidature inexistante ou appartenant à un autre étudiant

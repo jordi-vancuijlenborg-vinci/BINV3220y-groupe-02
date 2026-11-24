@@ -17,12 +17,22 @@ const parsePeriod = (value: unknown): PeriodCode | undefined => {
   return value as PeriodCode;
 };
 
+const parseTitle = (value: unknown): string | undefined => {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") {
+    throw new HttpError(400, "INVALID_QUERY", "Le paramètre q est invalide");
+  }
+  const title = value.trim();
+  return title || undefined;
+};
+
 export const createOffersRouter = (offersService: OffersService) => {
   const router = Router();
 
   router.get("/", authorize(canListOffers), (req, res) => {
     const period = parsePeriod(req.query.period);
-    res.json(offersService.listOffers(getCurrentUser(req), period).map(toOfferDto));
+    const title = parseTitle(req.query.q);
+    res.json(offersService.listOffers(getCurrentUser(req), period, title).map(toOfferDto));
   });
 
   return router;
