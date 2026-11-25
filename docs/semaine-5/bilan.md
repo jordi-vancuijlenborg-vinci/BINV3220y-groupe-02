@@ -1,5 +1,9 @@
 # Bilan semaine 10 : MCP et tests end-to-end avec Playwright
 
+**Crédits IA**
+- Zahra : 11.7/200
+- Jordi : 50.9/200
+
 Fichiers de la séance :
 
 - `e2e/recherche-offres/scenarios.md` : les deux scénarios ;
